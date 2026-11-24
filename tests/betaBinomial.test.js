@@ -1,0 +1,28 @@
+import {describe,it,expect} from 'vitest';
+import {betaBinomial,betaPDF,betaCDF,betaQuantile,logGamma,logBinomialLikelihood} from '../src/math/betaBinomial.js';
+describe('Beta-Binomial Bayesian inference',()=>{
+ it('uniform prior is Beta(1,1)',()=>expect(betaPDF(.3,1,1)).toBeCloseTo(1,10));
+ it('Beta(2,2) symmetric density',()=>expect(betaPDF(.5,2,2)).toBeCloseTo(1.5,10));
+ it('Beta(1,1) CDF is x',()=>expect(betaCDF(.37,1,1)).toBeCloseTo(.37,10));
+ it('Beta(2,1) CDF is x squared',()=>expect(betaCDF(.3,2,1)).toBeCloseTo(.09,9));
+ it('Beta(1,2) CDF',()=>expect(betaCDF(.3,1,2)).toBeCloseTo(.51,9));
+ it('Beta quantile inverts CDF',()=>expect(betaCDF(betaQuantile(.025,8,4),8,4)).toBeCloseTo(.025,8));
+ it('uniform prior quantiles',()=>expect(betaQuantile(.975,1,1)).toBeCloseTo(.975,9));
+ it('posterior parameters',()=>{const r=betaBinomial(2,3,7,10);expect([r.posteriorAlpha,r.posteriorBeta]).toEqual([9,6])});
+ it('posterior mean',()=>expect(betaBinomial(1,1,8,10).posteriorMean).toBeCloseTo(.75));
+ it('prior mean',()=>expect(betaBinomial(2,8,0,0).priorMean).toBeCloseTo(.2));
+ it('no data preserves prior',()=>{const r=betaBinomial(2,8,0,0);expect([r.posteriorAlpha,r.posteriorBeta]).toEqual([2,8])});
+ it('credible interval brackets mean for Beta(9,3)',()=>{const r=betaBinomial(1,1,8,10);expect(r.credibleLow).toBeLessThan(r.posteriorMean);expect(r.credibleHigh).toBeGreaterThan(r.posteriorMean)});
+ it('credible interval is ordered',()=>{const r=betaBinomial(.5,.5,1,2);expect(r.credibleLow).toBeLessThan(r.credibleHigh)});
+ it('variance is positive',()=>expect(betaBinomial(1,1,8,10).posteriorVariance).toBeGreaterThan(0));
+ it('sample proportion',()=>expect(betaBinomial(1,1,8,10).sampleProportion).toBe(.8));
+ it('zero observations has no sample proportion',()=>expect(betaBinomial(1,1,0,0).sampleProportion).toBeNull());
+ it('likelihood at 0.5',()=>expect(logBinomialLikelihood(.5,2,4)).toBeCloseTo(4*Math.log(.5)));
+ it('likelihood at boundary',()=>expect(logBinomialLikelihood(0,1,3)).toBe(-Infinity));
+ it('gamma factorial',()=>expect(Math.exp(logGamma(5))).toBeCloseTo(24));
+ it('rejects invalid prior',()=>expect(()=>betaBinomial(0,1,2,3)).toThrow());
+ it('rejects successes greater than trials',()=>expect(()=>betaBinomial(1,1,4,3)).toThrow());
+ it('rejects fractional counts',()=>expect(()=>betaBinomial(1,1,1.5,3)).toThrow());
+ it('rejects invalid quantile',()=>expect(()=>betaQuantile(-.1,2,3)).toThrow());
+ it('CDF endpoints',()=>{expect(betaCDF(0,2,3)).toBe(0);expect(betaCDF(1,2,3)).toBe(1)});
+});
